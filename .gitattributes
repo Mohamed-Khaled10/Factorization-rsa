@@ -1,2 +1,131 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+import random
+import math
+import time
+
+def greatest_common_divisor(a, b):
+    while b != 0:
+        a, b = b, a % b
+    return a
+
+def extended_euclidean_gcd(a, b):
+    if a == 0:
+        return b, 0, 1
+    else:
+        gcd, x, y = extended_euclidean_gcd(b % a, a)
+        return gcd, y - (b // a) * x, x
+
+def mod_inverse(a, m):
+    gcd, x, _ = extended_euclidean_gcd(a, m)
+    if gcd != 1:
+        raise ValueError("Inverse does not exist.")
+    else:
+        return x % m
+    
+def probable_prime_numbers(n, k=10):
+    if n <= 1:
+        return False
+    if n <= 3:
+        return True
+    if n % 2 == 0 or n % 3 == 0:
+        return False
+
+    r, s = 0, n - 1
+    while s % 2 == 0:
+        r += 1
+        s //= 2
+
+    for _ in range(k):
+        a = random.randint(2, n - 2)
+        x = pow(a, s, n)
+        if x == 1 or x == n - 1:
+            continue
+        for _ in range(r - 1):
+            x = pow(x, 2, n)
+            if x == n - 1:
+                break
+        else:
+            return False
+    return True
+
+def generate_prime(bits):
+    while True:
+        p = random.randint(2**(bits - 1), 2**bits - 1)
+        if probable_prime_numbers(p):
+            return p
+
+def encrypt(message, public_key):
+    n, e = public_key
+    return pow(message, e, n)
+
+def decrypt(ciphertext, private_key):
+    n, d = private_key
+    return pow(ciphertext, d, n)
+
+def generate_keys(bits):
+    if bits not in [8, 16]:
+        raise ValueError("Key generation bits must be either 8 or 16.")
+    
+    p = generate_prime(bits // 2)
+    q = generate_prime(bits // 2)
+    n = p * q
+    phi = (p - 1) * (q - 1)
+
+    while True:
+        e = random.randint(2, phi - 1)
+        if greatest_common_divisor(e, phi) == 1:
+            break
+
+    d = mod_inverse(e, phi)
+    return (n, e), (n, d)
+
+def factorize_modulus(n):
+    p, q = None, None
+    start_time = time.perf_counter()
+    for i in range(2, int(math.sqrt(n)) + 1):
+        if n % i == 0:
+            p = i
+            q = n // i
+            break
+    end_time = time.perf_counter()
+    runtime = end_time - start_time
+    return p, q, runtime
+
+def main_factorization():
+    while True:
+        print("Welcome to RSA Cryptography Program (Factorization Approach)!")
+        print("Choose an Option:")
+        print("1. Generate Keys and Encrypt/Decrypt a Message")
+        print("2. Exit")
+
+        option = input("Enter your choice: ")
+        
+        if option == "1":
+            bits = int(input("Enter the number of bits for key generation (8 or 16): "))
+            if bits not in [8, 16]:
+                print("Invalid choice! Please enter 8 or 16")
+                continue
+            public_key, private_key = generate_keys(bits)
+            print(f"Public Key (n, e): {public_key}")
+            print(f"Private Key (n, d): {private_key}\n")
+
+            message = input("Enter the message to encrypt: ")
+            ascii_codes = [ord(char) for char in message]
+            encrypted_message = [encrypt(code, public_key) for code in ascii_codes]
+            print(f"Encrypted Message: {encrypted_message}\n")
+
+            decrypted_ascii_codes = [decrypt(code, private_key) for code in encrypted_message]
+            decrypted_message = "".join([chr(code) for code in decrypted_ascii_codes])
+            print(f"Decrypted Message: {decrypted_message}\n")
+
+            _, _, runtime = factorize_modulus(public_key[0])
+            print(f"Runtime for Factorizing Modulus: {runtime:.6f} Seconds\n")
+            
+        elif option == "2":
+            print("Exiting the program")
+            break
+
+        else:
+            print("Invalid choice! Please enter a valid option.\n")
+            
+if __name__ == "__main__":
+    main_factorization()
